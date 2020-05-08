@@ -17,8 +17,6 @@ client.on("message", async (msg) => {
 
   if (input[0] === prefix) {
     switch (cmd) {
-      case "zevax":
-        return msg.channel.send("Nothing to worry about now @Lunars");
 
       //! Albion Market Commands
 
@@ -52,6 +50,21 @@ client.on("message", async (msg) => {
         .setDescription(results)
         return msg.channel.send(embedmsg);
       }
+
+      //! General Commands
+
+      //* Prefix
+      case 'prefix':{
+        if(!input[2]){
+          return msg.channel.send(`Current prefix is: ${prefix}\nTo change the prefix,use the following command:\n\`\`\`${prefix} prefix [NewPrefix]\`\`\``)
+        }
+        prefix = input[2]
+        return msg.channel.send(`Prefix has been changed to: ${prefix}`)
+      }
+
+      //! Fun Commands
+
+      //* Latom
       case 'latom':
       case 'f':{
       const embedmsg = new MessageEmbed()
