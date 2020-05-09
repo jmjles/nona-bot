@@ -1,13 +1,14 @@
 const axios = require("axios");
 const itemList = require("../assets/items.json");
 const moment = require("moment");
+
+//* Gold Lookup
 module.exports.goldPriceLookup = async () => {
   const { data } = await axios.get(
     " https://www.albion-online-data.com/api/v2/stats/gold?count=5"
   );
   return data.map(
-    (e) =>
-      `silver ${e.price} ${moment(e.timestamp).utc(true).fromNow()}\n`
+    (e) => `silver ${e.price} ${moment(e.timestamp).utc(true).fromNow()}\n`
   );
 };
 
@@ -32,14 +33,45 @@ module.exports.priceLookup = async (name, lang) => {
       ? null
       : results.push(
           `${item.city}\n Sell Price: ${item.sell_price_min} | ${moment(
-            item.sell_price_min_date).utc(true).fromNow()}\n Buy Price: ${item.buy_price_min} | ${moment(
-            item.buy_price_min_date).utc(true).fromNow()}\n\n`
+            item.sell_price_min_date
+          )
+            .utc(true)
+            .fromNow()}\n Buy Price: ${item.buy_price_min} | ${moment(
+            item.buy_price_min_date
+          )
+            .utc(true)
+            .fromNow()}\n\n`
         )
   );
-  console.log(results);
   return {
     uniName: filtered[0].UniqueName,
     name: filtered[0].LocalizedNames[lang],
     results,
   };
+};
+
+//* Player Search
+module.exports.getPlayer = async (name) => {
+  try {
+    const {
+      data: { players },
+    } = await axios(
+      `https://gameinfo.albiononline.com/api/gameinfo/search?q=${name}`
+    );
+    console.log(players)
+    const player = players[0];
+    if (!player.Name) {
+      return {};
+    }
+    return {
+      name: player.Name,
+      alliance: player.AllianceName,
+      guild: player.GuildName,
+      killfame: player.KillFame,
+      deathfame: player.DeathFame,
+    };
+  } catch (er) {
+    console.log(er);
+    return {};
+  }
 };
