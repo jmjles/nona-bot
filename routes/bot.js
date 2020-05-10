@@ -3,7 +3,13 @@ const route = require("express").Router();
 const { Client, MessageEmbed } = require("discord.js");
 const client = new Client();
 const token = process.env.TOKEN;
-const { goldPriceLookup, priceLookup, getPlayer } = require("./botFunctions");
+const {
+  goldPriceLookup,
+  priceLookup,
+  getPlayer,
+  getGuild,
+  getGuildMember,
+} = require("./botFunctions");
 let prefix = "`";
 let lang = "EN-US";
 const latom = "./assets/latom.png";
@@ -84,34 +90,56 @@ client.on("message", async (msg) => {
 
       case "guild": {
         if (!input[2]) {
-          return msg.channel.send(
+          msg.channel.send(
             `To search a guild, use the following command:\n\`\`\`${prefix} guild [guildname]\`\`\``
+          );
+          return msg.channel.send(
+            `To search a guild's members, use the following command:\n\`\`\`${prefix} guild [guildname] members\`\`\``
           );
         }
         msg.channel.send("Experimental command!");
         let name = "";
-        for (let i = 2; i < input.length; i++) {
-          name = name + " " + input[i];
-          name = name.trim();
+        if (input[input.length - 1].toLowerCase() === "members") {
+          for (let i = 2; i < input.length - 1; i++) {
+            name = name + " " + input[i];
+            name = name.trim();
+          }
+          const result = await getGuildMember(name);
+          if (!result.guild) {
+            return msg.channel.send("Guild search failed...");
+          }
+          const members = result.members.map((member) => `${member.name}\n\n`);
+          const embedmsg = new MessageEmbed()
+            .setTitle(
+              `${
+                !result.alliance ? "" : `[${result.alliance.toUpperCase()}]`
+              } ${result.guild} Members`
+            )
+            .setDescription(members)
+            .setColor(botColor);
+          return msg.channel.send(embedmsg);
+        } else {
+          for (let i = 2; i < input.length; i++) {
+            name = name + " " + input[i];
+            name = name.trim();
+          }
+          const result = await getGuild(name);
+          if (!result.name) {
+            return msg.channel.send("Guild search failed...");
+          }
+          const embedmsg = new MessageEmbed()
+            .setTitle(
+              `${
+                !result.alliance ? "" : `[${result.alliance.toUpperCase()}]`
+              } ${result.name}`
+            )
+            .setDescription(
+              `Founder: ${result.founder}\n\nKill Fame: ${result.killfame}\n\nDeath Fame: ${result.deathfame}\n\nMember Count: ${result.memberCount}`
+            )
+            .setFooter(`Guild Created at: ${result.founded}`)
+            .setColor(botColor);
+          return msg.channel.send(embedmsg);
         }
-        const result = await getPlayer(name);
-        
-        console.log(result);
-        /*         if (!result.name) {
-          return msg.channel.send("Player search failed...");
-        }
-        const embedmsg = new MessageEmbed()
-          .setTitle(result.name)
-          .setDescription(
-            `Guild: ${
-              !result.alliance ? "" : `[${result.alliance.toUpperCase()}]`
-            } ${result.guild}\n\nKill Fame: ${result.killfame}\n\nDeath Fame: ${
-              result.deathfame
-            }`
-          )
-          .setColor(botColor);
-        return msg.channel.send(embedmsg); */
-        return;
       }
       //! General Commands
 

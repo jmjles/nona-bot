@@ -58,7 +58,7 @@ module.exports.getPlayer = async (name) => {
     } = await axios(
       `https://gameinfo.albiononline.com/api/gameinfo/search?q=${name}`
     );
-    console.log(players)
+    console.log(players);
     const player = players[0];
     if (!player.Name) {
       return {};
@@ -69,6 +69,56 @@ module.exports.getPlayer = async (name) => {
       guild: player.GuildName,
       killfame: player.KillFame,
       deathfame: player.DeathFame,
+    };
+  } catch (er) {
+    console.log(er);
+    return {};
+  }
+};
+
+//* Guild Search
+module.exports.getGuild = async (name) => {
+  try {
+    const {
+      data: { guilds },
+    } = await axios(
+      `https://gameinfo.albiononline.com/api/gameinfo/search?q=${name}`
+    );
+    if (guilds.length === 0) return {};
+    const id = guilds[0].Id;
+    const { data } = await axios(
+      `https://gameinfo.albiononline.com/api/gameinfo/guilds/${id}`
+    );
+    return {
+      id,
+      name: data.Name,
+      founder: data.FounderName,
+      founded: moment(data.Founded).format("MMMM Do YYYY"),
+      alliance: data.AllianceTag,
+      memberCount: data.MemberCount,
+      killfame: data.killFame,
+      deathfame: data.DeathFame,
+    };
+  } catch (er) {
+    console.log(er);
+    return {};
+  }
+};
+
+//* Guild Members
+module.exports.getGuildMember = async (q) => {
+  try {
+    const { id, name, alliance } = await this.getGuild(q);
+    const { data } = await axios(
+      `https://gameinfo.albiononline.com/api/gameinfo/guilds/${id}/members`
+    );
+    //console.log(data[0]);
+    return {
+      guild: name,
+      alliance,
+      members: data.map((player) => {
+        return { name: player.Name, id: player.Id };
+      }),
     };
   } catch (er) {
     console.log(er);
