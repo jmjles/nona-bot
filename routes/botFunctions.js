@@ -12,21 +12,52 @@ module.exports.goldPriceLookup = async () => {
   );
 };
 
-//* Price Lookup
-module.exports.priceLookup = async (name, lang) => {
+//* Product Name Lookup
+module.exports.productName = (name, lang) => {
   let filtered = itemList.filter((item) => item.LocalizedNames);
   let regex = new RegExp("nontradable", "gi");
-
   filtered = filtered.filter(
     (item) => !item.LocalizationNameVariable.match(regex)
   );
+  name = name.replace(".",' @')
+  const query = name.split(" ");
 
-  regex = new RegExp(name, "gi");
-  filtered = filtered.filter((item) => item.LocalizedNames[lang].match(regex));
+  query.forEach((word) => {
+    regex = new RegExp(word, "gi");
+    filtered = filtered.filter(
+      (item) =>
+        item.LocalizedNames[lang].match(regex) ||
+        item.LocalizationNameVariable.match(regex) ||
+        item.UniqueName.match(regex)
+    );
+  })
+  //! limit results to 5
+  let result = [];
+  if (filtered.length === 0) return result
 
+  for (let i = 0;i < filtered.length && i < 5; i++) {
+    const name = filtered[i].LocalizedNames[lang];
+    const uniName = filtered[i].UniqueName;
+    const displayName = `${uniName.substring(0, 2)}${
+      uniName.includes("@") ? `.${uniName.charAt(uniName.length - 1)}` : ``
+    } ${name}`;
+
+    result.push({
+      name,
+      uniName,
+      displayName,
+    });
+  }
+  return result;
+};
+
+//* Price Lookup
+module.exports.priceLookup = async (name) => {
   const { data } = await axios(
-    `https://www.albion-online-data.com/api/v2/stats/prices/${filtered[0].UniqueName}?qualities=1`
+    `https://www.albion-online-data.com/api/v2/stats/prices/${name}?qualities=1`
   );
+  const img = `https://render.albiononline.com/v1/item/${name}.png`;
+
   const results = [];
   data.forEach((item) =>
     item.city.match(".*\\d.*")
@@ -36,7 +67,7 @@ module.exports.priceLookup = async (name, lang) => {
             item.sell_price_min_date
           )
             .utc(true)
-            .fromNow()}\n Buy Price: ${item.buy_price_min} | ${moment(
+            .fromNow()}\n Buy Price: ${item.buy_price_max} | ${moment(
             item.buy_price_min_date
           )
             .utc(true)
@@ -44,9 +75,8 @@ module.exports.priceLookup = async (name, lang) => {
         )
   );
   return {
-    uniName: filtered[0].UniqueName,
-    name: filtered[0].LocalizedNames[lang],
     results,
+    img,
   };
 };
 
@@ -58,21 +88,24 @@ module.exports.getPlayer = async (name) => {
     } = await axios(
       `https://gameinfo.albiononline.com/api/gameinfo/search?q=${name}`
     );
+    let result = [];
     console.log(players);
-    const player = players[0];
-    if (!player.Name) {
-      return {};
-    }
-    return {
-      name: player.Name,
-      alliance: player.AllianceName,
-      guild: player.GuildName,
-      killfame: player.KillFame,
-      deathfame: player.DeathFame,
-    };
+    players.map((player) =>
+      result.length < 5
+        ? result.push({
+            name: player.Name,
+            alliance: player.AllianceName,
+            guild: player.GuildName,
+            killfame: player.KillFame,
+            deathfame: player.DeathFame,
+          })
+        : ""
+    );
+
+    return result;
   } catch (er) {
     console.log(er);
-    return {};
+    return [];
   }
 };
 
@@ -101,7 +134,7 @@ module.exports.getGuild = async (name) => {
     };
   } catch (er) {
     console.log(er);
-    return {};
+    return [];
   }
 };
 
@@ -119,6 +152,31 @@ module.exports.getGuildMember = async (q) => {
       members: data.map((player) => {
         return { name: player.Name, id: player.Id };
       }),
+    };
+  } catch (er) {
+    console.log(er);
+    return [];
+  }
+};
+
+//* About Item
+module.exports.aboutItem = (name, lang) => {
+  try {
+    let filtered = itemList.filter((item) => item.LocalizedNames);
+    filtered = filtered.filter((item) => item.LocalizedDescriptions);
+
+    regex = new RegExp(name, "gi");
+    filtered = filtered.filter((item) =>
+      item.LocalizedNames[lang].match(regex)
+    );
+
+    if (filtered.length === 0) {
+      return {};
+    }
+    const result = filtered[0];
+    return {
+      name: result.LocalizedNames[lang],
+      description: result.LocalizedDescriptions[lang],
     };
   } catch (er) {
     console.log(er);
